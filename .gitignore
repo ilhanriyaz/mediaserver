@@ -1,0 +1,18 @@
+# Runtime config data — auto-generated when the stack first runs
+config/
+etc-pihole/
+data/
+letsencrypt/
+
+# Local secrets — never commit; copy .env.example to .env
+.env
+
+# Belt-and-suspenders: catch any secrets or runtime files if config dirs are ever un-ignored
+*.db
+*.db-shm
+*.db-wal
+*.log
+*.key
+*.crt
+*.pem
+*.zip
