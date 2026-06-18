@@ -101,6 +101,46 @@ Access the admin UI at `http://<host-ip>:81` on first run. Default credentials: 
 
 Pi-hole runs as a DNS server on port 53. Point your router (or individual devices) to `<host-ip>` as the DNS server to get network-wide ad blocking. The admin UI is at `http://<host-ip>:8053/admin`.
 
+### Domain Routing with Tailscale + Pi-hole + Nginx Proxy Manager
+
+Use this pattern when you want friendly domain links like `jellyfin.yourdomain.com` and `jellyseerr.yourdomain.com` to work from devices connected through Tailscale.
+
+How resolution works:
+
+1. **Tailscale DNS** sends your domain lookups to your Pi-hole nameserver.
+2. **Pi-hole Local DNS** returns your media host IP (usually the host running this stack).
+3. **Nginx Proxy Manager** receives the HTTPS request and routes it to the correct container (`jellyfin` or `jellyseerr`).
+
+#### Step-by-step setup
+
+1. **Get the IP to use for DNS answers**
+   - Use the Tailscale IP of the host running this stack (preferred for remote Tailscale clients).
+   - Example: `100.x.y.z`
+
+2. **Create local DNS records in Pi-hole**
+   - Open Pi-hole admin: `http://<host-ip>:8053/admin`
+   - Go to **Local DNS → DNS Records**
+   - Add:
+     - `jellyfin.yourdomain.com` → `100.x.y.z`
+     - `jellyseerr.yourdomain.com` → `100.x.y.z`
+
+3. **Configure proxy hosts in Nginx Proxy Manager**
+   - Open NPM admin: `http://<host-ip>:81`
+   - Add proxy host for `jellyfin.yourdomain.com` forwarding to `jellyfin:8096`
+   - Add proxy host for `jellyseerr.yourdomain.com` forwarding to `jellyseerr:5055`
+   - Request/enable SSL certificates and force HTTPS
+
+4. **Set Pi-hole as nameserver in Tailscale**
+   - Open Tailscale admin console → **DNS**
+   - Add your Pi-hole host as a nameserver (use the host Tailscale IP)
+   - Under split DNS / restricted nameserver domains, add `yourdomain.com`
+   - Enable DNS settings for your tailnet clients
+
+5. **(Optional) Make Pi-hole your global Tailscale resolver**
+   - If you want all DNS queries from Tailscale devices to use Pi-hole (not only `yourdomain.com`), set Pi-hole as the global nameserver in the same DNS page.
+
+After this, any Tailscale-connected client resolving `*.yourdomain.com` will use Tailscale DNS → Pi-hole → Nginx Proxy Manager, and be routed to Jellyfin/Jellyseerr correctly.
+
 ### Connecting the *arr Services
 
 After the stack is up, configure each service in this order:
