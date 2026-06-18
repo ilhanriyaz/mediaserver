@@ -13,6 +13,8 @@ services:
       - ./config/jellyfin:/config
       - /mnt/mediadrive/media/movies:/data/movies
       - /mnt/mediadrive/media/tv:/data/tv
+    networks:
+      - medianet
     restart: unless-stopped
 
   radarr:
@@ -28,6 +30,8 @@ services:
       - /mnt/mediadrive/torrents:/downloads
     ports:
       - 7878:7878
+    networks:
+      - medianet
     restart: unless-stopped
 
   sonarr:
@@ -43,6 +47,8 @@ services:
       - /mnt/mediadrive/torrents:/downloads
     ports:
       - 8989:8989
+    networks:
+      - medianet
     restart: unless-stopped
 
   bazarr:
@@ -58,6 +64,8 @@ services:
       - /mnt/mediadrive/media/tv:/tv
     ports:
       - 6767:6767
+    networks:
+      - medianet
     restart: unless-stopped
 
   prowlarr:
@@ -71,6 +79,8 @@ services:
       - ./config/prowlarr:/config
     ports:
       - 9696:9696
+    networks:
+      - medianet
     restart: unless-stopped
 
   gluetun:
@@ -90,6 +100,8 @@ services:
       - 8080:8080
       - 6881:6881
       - 6881:6881/udp
+    networks:
+      - medianet
     restart: unless-stopped
 
   qbittorrent:
@@ -111,6 +123,7 @@ services:
 
   nginx-proxy-manager:
     image: jc21/nginx-proxy-manager:latest
+    container_name: nginx-proxy-manager
     restart: unless-stopped
     environment:
       - TZ=${TZ:-Europe/London}
@@ -119,13 +132,15 @@ services:
       - 81:81
       - 443:443
     volumes:
-      - ./data:/data
-      - ./letsencrypt:/etc/letsencrypt
+      - ./config/npm/data:/data
+      - ./config/npm/letsencrypt:/etc/letsencrypt
+    networks:
+      - medianet
 
   jellyseerr:
     image: ghcr.io/fallenbagel/jellyseerr:latest
-    init: true
     container_name: jellyseerr
+    init: true
     environment:
       - LOG_LEVEL=debug
       - TZ=${TZ:-Europe/London}
@@ -133,12 +148,8 @@ services:
       - 5055:5055
     volumes:
       - ./config/jellyseerr:/app/config
-    healthcheck:
-      test: wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/status || exit 1
-      start_period: 20s
-      timeout: 3s
-      interval: 15s
-      retries: 3
+    networks:
+      - medianet
     restart: unless-stopped
 
   pihole:
@@ -154,4 +165,10 @@ services:
       - FTLCONF_dns_listeningMode=ALL
     volumes:
       - ./etc-pihole:/etc/pihole
+    networks:
+      - medianet
     restart: unless-stopped
+
+networks:
+  medianet:
+    driver: bridge
